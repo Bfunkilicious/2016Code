@@ -13,6 +13,7 @@ DriveBaseSub::DriveBaseSub() :
 	talonBL = RobotMap::driveBaseSubBackLeftTalon;
 	talonBR = RobotMap::driveBaseSubBackRightTalon;
 	robotDrive = RobotMap::driveBaseSubRobotDriveController;
+	//imuSerialPort = new SerialPort(57600, SerialPort::Port::kUSB);
 	imuRobot = new AHRS(SerialPort::Port::kUSB);
 	tigerDrive = new TigerDrive(imuRobot);
 	IMU_Yaw = 0;

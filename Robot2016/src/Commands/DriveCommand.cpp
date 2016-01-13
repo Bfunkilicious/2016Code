@@ -44,6 +44,7 @@ void DriveCommand::Initialize() {
 
 // Called repeatedly when this Command is scheduled to run
 void DriveCommand::Execute() {
+	printf("DriveCommand Execute!\n");
 	SmartDashboard::PutNumber("imuYaw", Robot::driveBaseSub->getAdjYaw());
 	isRotDone = Robot::driveBaseSub->getIsRotDone();
 	//printf("isRotDone%d\n", isRotDone);

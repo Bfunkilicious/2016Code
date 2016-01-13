@@ -245,6 +245,7 @@ class AHRSInternal : public IIOCompleteNotification, public IBoardCapabilities {
 
 AHRS::AHRS(SPI::Port spi_port_id, uint8_t update_rate_hz) {
     SPIInit(spi_port_id, DEFAULT_SPI_BITRATE, update_rate_hz);
+    printf("AHRS Constructor!\n");
 }
 
 /**
@@ -269,6 +270,7 @@ AHRS::AHRS(SPI::Port spi_port_id, uint8_t update_rate_hz) {
  */
 
 AHRS::AHRS(SPI::Port spi_port_id, uint32_t spi_bitrate, uint8_t update_rate_hz) {
+	printf("AHRS Constructor!\n");
     SPIInit(spi_port_id, spi_bitrate, update_rate_hz);
 }
 
@@ -286,6 +288,7 @@ AHRS::AHRS(SPI::Port spi_port_id, uint32_t spi_bitrate, uint8_t update_rate_hz) 
  * @param update_rate_hz Custom Update Rate (Hz)
  */
 AHRS::AHRS(I2C::Port i2c_port_id, uint8_t update_rate_hz) {
+	printf("AHRS Constructor!\n");
     I2CInit(i2c_port_id, update_rate_hz);
 }
 
@@ -310,6 +313,7 @@ AHRS::AHRS(I2C::Port i2c_port_id, uint8_t update_rate_hz) {
      * @param update_rate_hz Custom Update Rate (Hz)
      */
 AHRS::AHRS(SerialPort::Port serial_port_id, AHRS::SerialDataType data_type, uint8_t update_rate_hz) {
+	printf("AHRS Constructor!\n");
     SerialInit(serial_port_id, data_type, update_rate_hz);
 }
 
@@ -321,6 +325,7 @@ AHRS::AHRS(SerialPort::Port serial_port_id, AHRS::SerialDataType data_type, uint
  * @param spi_port_id SPI port to use.
  */
 AHRS::AHRS(SPI::Port spi_port_id) {
+	printf("AHRS Constructor!\n");
     SPIInit(spi_port_id, DEFAULT_SPI_BITRATE, NAVX_DEFAULT_UPDATE_RATE_HZ);
 }
 
@@ -333,6 +338,7 @@ AHRS::AHRS(SPI::Port spi_port_id) {
  * @param i2c_port_id I2C port to use
  */
 AHRS::AHRS(I2C::Port i2c_port_id) {
+	printf("AHRS Constructor!\n");
     I2CInit(i2c_port_id, NAVX_DEFAULT_UPDATE_RATE_HZ);
 }
 
@@ -347,6 +353,7 @@ AHRS::AHRS(I2C::Port i2c_port_id) {
  * @param serial_port_id SerialPort to use
  */
 AHRS::AHRS(SerialPort::Port serial_port_id) {
+	printf("AHRS Constructor!\n");
     SerialInit(serial_port_id, SerialDataType::kProcessedData, NAVX_DEFAULT_UPDATE_RATE_HZ);
 }
 
@@ -381,6 +388,7 @@ float AHRS::GetRoll() {
  * @return The current yaw value in degrees (-180 to 180).
  */
 float AHRS::GetYaw() {
+	printf("Getting Yaw!\n");
     if ( ahrs_internal->IsBoardYawResetSupported() ) {
         return this->yaw;
     } else {
