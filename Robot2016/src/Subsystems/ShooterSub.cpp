@@ -20,6 +20,7 @@ void ShooterSub::InitDefaultCommand()
 
 void ShooterSub::Shoot(float speed)
 {
+	printf("ShooterSub::shoot! \n");
 	Robot::shooterSub->talonLeft->Set(speed);
 	Robot::shooterSub->talonRight->Set(speed);
 }

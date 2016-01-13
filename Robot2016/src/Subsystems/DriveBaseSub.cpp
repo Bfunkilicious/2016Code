@@ -19,6 +19,7 @@ DriveBaseSub::DriveBaseSub() :
 	IMU_Yaw = 0;
 	calculatedoffset = 0;
 	yawoffset = 0;
+	printf("driveBaseSub constructor!\n");
 }
 
 void DriveBaseSub::InitDefaultCommand()

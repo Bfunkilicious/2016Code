@@ -38,6 +38,7 @@ void Robot::RobotInit() {
 	//CameraServer::GetInstance()->SetQuality(50);
 	//the camera name (ex "cam0") can be found through the roborio web interface
 	//CameraServer::GetInstance()->StartAutomaticCapture("cam0");
+	printf("Robot init!\n");
   }
 
 /**
@@ -72,6 +73,7 @@ void Robot::TeleopInit() {
 
 void Robot::TeleopPeriodic() {
 	Scheduler::GetInstance()->Run();
+	printf("Teleop Periodic\n");
 }
 
 void Robot::TestPeriodic() {

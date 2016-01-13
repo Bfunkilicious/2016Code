@@ -35,7 +35,7 @@ void RobotMap::init() {
     
     shooterSubLeftTalon.reset(new CANTalon(1));
 
-    shooterSubLeftTalon.reset(new CANTalon(3));
+    shooterSubRightTalon.reset(new CANTalon(3));
 
     driveBaseSubRobotDriveController.reset(new RobotDrive(driveBaseSubFrontLeftTalon, driveBaseSubBackLeftTalon,
               driveBaseSubFrontRightTalon, driveBaseSubBackRightTalon));
