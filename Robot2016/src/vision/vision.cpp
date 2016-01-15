@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #define VIEW_ANGLE 34.8665269
 #define AUTO_STEADY_STATE 1.9 //seconds
 
+#include "../Robot.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <opencv2/opencv.hpp>
@@ -36,16 +37,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #include <unistd.h>
 #include <pthread.h>
 
-using namespace cv;
-using namespace std;
+//using namespace cv;
+//using namespace std;
 
 //struct to define program execution variables passed in from the command line
 struct ProgParams
 {
-	string ROBOT_IP;
-	string ROBOT_PORT;
-	string CAMERA_IP;
-	string IMAGE_FILE;
+	std::string ROBOT_IP;
+	std::string ROBOT_PORT;
+	std::string CAMERA_IP;
+	std::string IMAGE_FILE;
 
 	bool From_Camera;
 	bool From_File;
@@ -59,8 +60,8 @@ struct ProgParams
 //Stuct to hold information about targets found
 struct Target
 {
-	Rect HorizontalTarget;
-	Rect VerticalTarget;
+	cv::Rect HorizontalTarget;
+	cv::Rect VerticalTarget;
 
 	double HorizontalAngle;
 	double VerticalAngle;
@@ -69,8 +70,8 @@ struct Target
 	double Vertical_W_H_Ratio;
 	double Vertical_H_W_Ratio;
 
-	Point HorizontalCenter;
-	Point VerticalCenter;
+	cv::Point HorizontalCenter;
+	cv::Point VerticalCenter;
 
 	bool HorizGoal;
 	bool VertGoal;
@@ -94,8 +95,8 @@ void parseCommandInputs(int argc, const char* argv[], ProgParams &params);
 void printCommandLineUsage();
 void initializeParams(ProgParams& params);
 double diffClock(timespec start, timespec end);
-Mat ThresholdImage(Mat img);
-void findTarget(Mat original, Mat thresholded, Target& targets, const ProgParams& params);
+cv::Mat ThresholdImage(cv::Mat img);
+void findTarget(cv::Mat original, cv::Mat thresholded, Target& targets, const ProgParams& params);
 void NullTargets(Target& target);
 void CalculateDist(Target& targets);
 void error(const char *msg);
@@ -124,13 +125,13 @@ double MaxVRatio = 8.5;
 int MAX_SIZE = 255;
 
 //Some common colors to draw with
-const Scalar RED = Scalar(0, 0, 255),
-			BLUE = Scalar(255, 0, 0),
-			GREEN = Scalar(0, 255, 0),
-			ORANGE = Scalar(0, 128, 255),
-			YELLOW = Scalar(0, 255, 255),
-			PINK = Scalar(255, 0,255),
-			WHITE = Scalar(255, 255, 255);
+const cv::Scalar RED = cv::Scalar(0, 0, 255),
+			BLUE = cv::Scalar(255, 0, 0),
+			GREEN = cv::Scalar(0, 255, 0),
+			ORANGE = cv::Scalar(0, 128, 255),
+			YELLOW = cv::Scalar(0, 255, 255),
+			PINK = cv::Scalar(255, 0,255),
+			WHITE = cv::Scalar(255, 255, 255);
 
 //GLOBAL MUTEX LOCK VARIABLES
 pthread_mutex_t targetMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -145,7 +146,7 @@ pthread_t AutoCounter;
 
 //Store targets in global variable
 Target targets;
-Mat frame;
+cv::Mat frame;
 
 //Global Timestamps for auto
 struct timespec autoStart, autoEnd;
@@ -154,18 +155,24 @@ struct timespec autoStart, autoEnd;
 //Control process thread exectution
 bool progRun;
 
-int visionTest(int argc, const char* argv[])
+//testing
+
+int visionTest()
 {
 
 	//Read command line inputs to determine how the program will execute
 	ProgParams params;
-	parseCommandInputs(argc, argv, params);
+	params.From_Camera = true;
+	params.From_File = false;
+	params.USB_Cam = true;
+	params.Visualize = false;
+	params.Timer = true;
 
 	//start mjpeg stream thread
 	pthread_create(&MJPEG, NULL, VideoCap, &params);
 
 	//Create Local Processing Image Variables
-	Mat img, thresholded, output;
+	cv::Mat img, thresholded, output;
 
 
 	//initialize variables so processing loop is false;
@@ -192,6 +199,12 @@ int visionTest(int argc, const char* argv[])
 			if (!frame.empty())
 			{
 				frame.copyTo(img);
+
+				Image* myImaqImage = imaqCreateImage(IMAQ_IMAGE_RGB,  0);
+				cv::Mat rgba;
+				cv::cvtColor(frame, rgba, CV_BGR2BGRA, 4);
+				int rc = imaqArrayToImage(myImaqImage, rgba.data, img.cols, img.rows);
+				CameraServer::GetInstance()->SetImage(myImaqImage);
 				pthread_mutex_unlock(&frameMutex);
 
 				thresholded = ThresholdImage(img);
@@ -203,17 +216,17 @@ int visionTest(int argc, const char* argv[])
 
 				if(params.Debug)
 				{
-					cout<<"Vert: "<<targets.VertGoal<<endl;
-					cout<<"Horiz: "<<targets.HorizGoal<<endl;
-					cout<<"Hot Goal: "<<targets.HotGoal<<endl;
-					cout<<"Dist:" <<targets.targetDistance<<endl<<endl;
+					std::cout<<"Vert: "<<targets.VertGoal<<std::endl;
+					std::cout<<"Horiz: "<<targets.HorizGoal<<std::endl;
+					std::cout<<"Hot Goal: "<<targets.HotGoal<<std::endl;
+					std::cout<<"Dist:" <<targets.targetDistance<<std::endl<<std::endl;
 				}
 				pthread_mutex_unlock(&targetMutex);
 
 				clock_gettime(CLOCK_REALTIME, &end);
 
 				if(params.Timer)
-					cout << "It took " << diffClock(start,end) << " seconds to process frame \n";
+					std::cout << "It took " << diffClock(start,end) << " seconds to process frame \n";
 
 
 			}
@@ -221,7 +234,7 @@ int visionTest(int argc, const char* argv[])
 			pthread_mutex_unlock(&frameMutex);
 
 			if(params.Visualize)
-				waitKey(5);
+				cv::waitKey(5);
 
 		}
 
@@ -269,28 +282,28 @@ void CalculateDist(Target& targets)
  * and is identified as a horizontal and vertical target
  * in the same frame, with known width and height.
  */
-void findTarget(Mat original, Mat thresholded, Target& targets, const ProgParams& params)
+void findTarget(cv::Mat original, cv::Mat thresholded, Target& targets, const ProgParams& params)
 {
 
-	vector<Vec4i> hierarchy;
-	vector<vector<Point> > contours;
+	std::vector<cv::Vec4i> hierarchy;
+	std::vector<std::vector<cv::Point> > contours;
 
 	//Find rectangles
-	findContours(thresholded, contours, hierarchy, RETR_EXTERNAL,
-			CHAIN_APPROX_SIMPLE);
+	findContours(thresholded, contours, hierarchy, cv::RETR_EXTERNAL,
+			cv::CHAIN_APPROX_SIMPLE);
 
 	if(params.Debug)
 	{
-	cout << "Contours: " << contours.size() << endl;
-	cout << "Hierarchy: " << hierarchy.size() << endl;
+	std::cout << "Contours: " << contours.size() << std::endl;
+	std::cout << "Hierarchy: " << hierarchy.size() << std::endl;
 	}
 
 	//run through all contours and remove small contours
 	unsigned int contourMin = 6;
-	for (vector<vector<Point> >::iterator it = contours.begin();
+	for (std::vector<std::vector<cv::Point> >::iterator it = contours.begin();
 			it != contours.end();)
 	{
-		//cout<<"Contour Size: "<<it->size()<<endl;
+		//std::cout<<"Contour Size: "<<it->size()<<std::endl;
 		if (it->size() < contourMin)
 			it = contours.erase(it);
 
@@ -300,10 +313,10 @@ void findTarget(Mat original, Mat thresholded, Target& targets, const ProgParams
 	}
 
 	//Vector for Min Area Boxes
-	vector<RotatedRect> minRect(contours.size());
+	std::vector<cv::RotatedRect> minRect(contours.size());
 
 	/// Draw contours
-	Mat drawing = Mat::zeros(original.size(), CV_8UC3);
+	cv::Mat drawing = cv::Mat::zeros(original.size(), CV_8UC3);
 
 	NullTargets(targets);
 
@@ -314,7 +327,7 @@ void findTarget(Mat original, Mat thresholded, Target& targets, const ProgParams
 		for (unsigned int i = 0; i < contours.size(); i++)
 		{
 			//capture corners of contour
-			minRect[i] = minAreaRect(Mat(contours[i]));
+			minRect[i] = cv::minAreaRect(cv::Mat(contours[i]));
 
 			if(params.Visualize)
 			{
@@ -323,13 +336,13 @@ void findTarget(Mat original, Mat thresholded, Target& targets, const ProgParams
 				//drawContours(original, contours, i, RED, 2, 8, hierarchy, 0,Point());
 
 				//draw a minimum box around the target in green
-				Point2f rect_points[4];
+				cv::Point2f rect_points[4];
 				minRect[i].points(rect_points);
 				for (int j = 0; j < 4; j++)
 					line(original, rect_points[j], rect_points[(j + 1) % 4], BLUE, 1, 8);
 			}
 			//define minAreaBox
-			Rect box = minRect[i].boundingRect();
+			cv::Rect box = minRect[i].boundingRect();
 
 			double WHRatio = box.width / ((double) box.height);
 			double HWRatio = ((double) box.height) / box.width;
@@ -340,7 +353,7 @@ void findTarget(Mat original, Mat thresholded, Target& targets, const ProgParams
 				targets.VertGoal = true;
 				targets.VerticalTarget = box;
 				targets.VerticalAngle = minRect[i].angle;
-				targets.VerticalCenter = Point(box.x + box.width / 2,
+				targets.VerticalCenter = cv::Point(box.x + box.width / 2,
 						box.y + box.height / 2);
 				targets.Vertical_H_W_Ratio = HWRatio;
 				targets.Vertical_W_H_Ratio = WHRatio;
@@ -352,7 +365,7 @@ void findTarget(Mat original, Mat thresholded, Target& targets, const ProgParams
 				targets.HorizGoal = true;
 				targets.HorizontalTarget = box;
 				targets.HorizontalAngle = minRect[i].angle;
-				targets.HorizontalCenter = Point(box.x + box.width / 2,
+				targets.HorizontalCenter = cv::Point(box.x + box.width / 2,
 						box.y + box.height / 2);
 				targets.Horizontal_H_W_Ratio = HWRatio;
 				targets.Horizontal_W_H_Ratio = WHRatio;
@@ -374,21 +387,21 @@ void findTarget(Mat original, Mat thresholded, Target& targets, const ProgParams
 
 			if(params.Debug)
 			{
-				cout<<"Contour: "<<i<<endl;
-				cout<<"\tX: "<<box.x<<endl;
-				cout<<"\tY: "<<box.y<<endl;
-				cout<<"\tHeight: "<<box.height<<endl;
-				cout<<"\tWidth: "<<box.width<<endl;
-				cout<<"\tangle: "<<minRect[i].angle<<endl;
-				cout<<"\tRatio (W/H): "<<WHRatio<<endl;
-				cout<<"\tRatio (H/W): "<<HWRatio<<endl;
-				cout<<"\tArea: "<<box.height*box.width<<endl;
+				std::cout<<"Contour: "<<i<<std::endl;
+				std::cout<<"\tX: "<<box.x<<std::endl;
+				std::cout<<"\tY: "<<box.y<<std::endl;
+				std::cout<<"\tHeight: "<<box.height<<std::endl;
+				std::cout<<"\tWidth: "<<box.width<<std::endl;
+				std::cout<<"\tangle: "<<minRect[i].angle<<std::endl;
+				std::cout<<"\tRatio (W/H): "<<WHRatio<<std::endl;
+				std::cout<<"\tRatio (H/W): "<<HWRatio<<std::endl;
+				std::cout<<"\tArea: "<<box.height*box.width<<std::endl;
 			}
 
 			//ID the center in yellow
-			Point center(box.x + box.width / 2, box.y + box.height / 2);
-			line(original, center, center, YELLOW, 3);
-			line(original, Point(320/2, 240/2), Point(320/2, 240/2), YELLOW, 3);
+			cv::Point center(box.x + box.width / 2, box.y + box.height / 2);
+			cv::line(original, center, center, YELLOW, 3);
+			cv::line(original, cv::Point(320/2, 240/2), cv::Point(320/2, 240/2), YELLOW, 3);
 
 		}
 		//if(params.Visualize)
@@ -396,7 +409,7 @@ void findTarget(Mat original, Mat thresholded, Target& targets, const ProgParams
 	}
 	else
 	{
-		cout << "No Contours" << endl;
+		std::cout << "No Contours" << std::endl;
 		targets.targetLeftOrRight = 0;
 	}
 
@@ -416,17 +429,17 @@ void findTarget(Mat original, Mat thresholded, Target& targets, const ProgParams
  * areas of interest based on their color
  *
  */
-Mat ThresholdImage(Mat original)
+cv::Mat ThresholdImage(cv::Mat original)
 {
 	//Local Temp Image
-	Mat thresholded;
+	cv::Mat thresholded;
 
 	//Threshold image to remove non-green objects
-	inRange(original, Scalar(minB, minG, minR), Scalar(maxB, maxG, maxR),
+	cv::inRange(original, cv::Scalar(minB, minG, minR), cv::Scalar(maxB, maxG, maxR),
 			thresholded);
 
 	//smooth edges
-	blur(thresholded, thresholded, Size(3, 3));
+	cv::blur(thresholded, thresholded, cv::Size(3, 3));
 
 	//Additional filtering if needed
 	//Canny(thresholded, thresholded, 100, 100, 3);
@@ -495,63 +508,63 @@ void parseCommandInputs(int argc, const char* argv[], ProgParams& params)
 		 * Note that we're starting on 1 because we don't need to know the
 		 * path of the program, which is stored in argv[0] */
 
-			if ((string(argv[i]) == "-f") && (i + 1 < argc)) //read from file
+			if ((std::string(argv[i]) == "-f") && (i + 1 < argc)) //read from file
 			{
 				// We know the next argument *should* be the filename:
-				params.IMAGE_FILE = string(argv[i + 1]);
+				params.IMAGE_FILE = std::string(argv[i + 1]);
 				params.From_Camera = false;
 				params.From_File = true;
 				i++;
 			}
-			else if ((string(argv[i]) == "-c") && (i + 1 < argc)) //camera IP
+			else if ((std::string(argv[i]) == "-c") && (i + 1 < argc)) //camera IP
 			{
-				params.CAMERA_IP = string(argv[i + 1]);
+				params.CAMERA_IP = std::string(argv[i + 1]);
 				params.From_Camera = true;
 				params.From_File = false;
 				params.USB_Cam = false;
 				i++;
 			}
-			else if (string(argv[i]) == "-u") //use USB Camera
+			else if (std::string(argv[i]) == "-u") //use USB Camera
 			{
-				//params.CAMERA_IP = string(argv[i + 1]);
+				//params.CAMERA_IP = std::string(argv[i + 1]);
 				params.From_Camera = true;
 				params.From_File = false;
 				params.USB_Cam = true;
 			}
-			else if ((string(argv[i]) == "-s") && (i + 1 < argc)) //robot TCP SERVER IP
+			else if ((std::string(argv[i]) == "-s") && (i + 1 < argc)) //robot TCP SERVER IP
 			{
-				params.ROBOT_IP = string(argv[i + 1]);
+				params.ROBOT_IP = std::string(argv[i + 1]);
 				i++;
 			}
-			else if ((string(argv[i]) == "-p") && (i + 1 < argc)) //robot TCP SERVER PORT
+			else if ((std::string(argv[i]) == "-p") && (i + 1 < argc)) //robot TCP SERVER PORT
 			{
-				params.ROBOT_PORT = string(argv[i + 1]);
+				params.ROBOT_PORT = std::string(argv[i + 1]);
 				i++;
 			}
-			else if (string(argv[i]) == "-t") //Enable Timing
+			else if (std::string(argv[i]) == "-t") //Enable Timing
 			{
 				params.Timer = true;
 			}
-			else if (string(argv[i]) == "-np") //no processing
+			else if (std::string(argv[i]) == "-np") //no processing
 			{
 				params.Process = false;
 			}
-			else if (string(argv[i]) == "-v") //Enable Visual output
+			else if (std::string(argv[i]) == "-v") //Enable Visual output
 			{
 				params.Visualize = true;
 			}
-			else if (string(argv[i]) == "-debug") //Enable debug output
+			else if (std::string(argv[i]) == "-debug") //Enable debug output
 			{
 				params.Debug = true;
 			}
-			else if (string(argv[i]) == "-d") //Default Params
+			else if (std::string(argv[i]) == "-d") //Default Params
 			{
-				params.ROBOT_PORT = string(argv[i + 1]);
+				params.ROBOT_PORT = std::string(argv[i + 1]);
 				return;
 			}
-			else if (string(argv[i]) == "-help") //help
+			else if (std::string(argv[i]) == "-help") //help
 			{
-				//todo: cout help on commands
+				//todo: std::cout help on commands
 				printCommandLineUsage();
 				exit(0);
 			}
@@ -590,21 +603,21 @@ void *VideoCap(void *args)
 
 	if (struct_ptr->From_File)
 	{
-		cout<<"Loading Image from file"<<endl;
+		std::cout<<"Loading Image from file"<<std::endl;
 
 		//read img and store it in global variable
 		pthread_mutex_lock(&frameMutex);
-		frame = imread(struct_ptr->IMAGE_FILE);
+		frame = cv::imread(struct_ptr->IMAGE_FILE);
 		pthread_mutex_unlock(&frameMutex);
 
 		if (!frame.empty())
 		{
-			cout<<"File Loaded: Starting Processing Thread"<<endl;
+			std::cout<<"File Loaded: Starting Processing Thread"<<std::endl;
 			progRun = true;
 		}
 		else
 		{
-			cout<<"Error Loading File"<<endl;
+			std::cout<<"Error Loading File"<<std::endl;
 			exit(0);
 		}
 
@@ -658,8 +671,8 @@ void *VideoCap(void *args)
 			vcap.set(CV_CAP_PROP_BRIGHTNESS, 1);
 			vcap.set(CV_CAP_PROP_CONTRAST, 0);
 
-			cout<<vcap.get(CV_CAP_PROP_FRAME_WIDTH)<<endl;
-			cout<<vcap.get(CV_CAP_PROP_FRAME_HEIGHT)<<endl;
+			std::cout<<vcap.get(CV_CAP_PROP_FRAME_WIDTH)<<std::endl;
+			std::cout<<vcap.get(CV_CAP_PROP_FRAME_HEIGHT)<<std::endl;
 
 		}
 		else //connect to IP Cam
@@ -685,7 +698,7 @@ void *VideoCap(void *args)
 
 
 		//Stream started
-		cout << "Successfully connected to Camera Stream" << std::endl;
+		std::cout << "Successfully connected to Camera Stream" << std::endl;
 
 		//set true boolean
 		pthread_mutex_lock(&targetMutex);
@@ -695,12 +708,12 @@ void *VideoCap(void *args)
 		//end clock to determine time to setup stream
 		clock_gettime(CLOCK_REALTIME, &end);
 
-		cout << "It took " << diffClock(start,end) << " seconds to set up stream " << endl;
+		std::cout << "It took " << diffClock(start,end) << " seconds to set up stream " << std::endl;
 
 		clock_gettime(CLOCK_REALTIME, &bufferStart);
 
 
-		cout<<"Waiting for stream buffer to clear..."<<endl;
+		std::cout<<"Waiting for stream buffer to clear..."<<std::endl;
 
 
 		//run in continuous loop
@@ -719,7 +732,7 @@ void *VideoCap(void *args)
 
 
 			if(struct_ptr->Timer)
-				cout << "It took FFMPEG " << diffClock(start,end) << " seconds to grab stream \n";
+				std::cout << "It took FFMPEG " << diffClock(start,end) << " seconds to grab stream \n";
 
 
 			//end timer to get time since stream started
@@ -732,7 +745,7 @@ void *VideoCap(void *args)
 			//before we are at the end of the stream, and can allow processing to begin.
 			if ((bufferDifference >= waitForBufferToClear) && !progRun)
 			{
-				cout<<"Buffer Cleared: Starting Processing Thread"<<endl;
+				std::cout<<"Buffer Cleared: Starting Processing Thread"<<std::endl;
 				progRun = true;
 
 			}
@@ -750,48 +763,48 @@ void *VideoCap(void *args)
  */
 void printCommandLineUsage()
 {
-	cout<<"Usage: 2168_Vision  [Input]  [Options] \n\n";
+	std::cout<<"Usage: 2168_Vision  [Input]  [Options] \n\n";
 
-	cout<<setw(10)<<left<<"Inputs:  Choose Only 1"<<endl;
+	std::cout<<std::setw(10)<<std::left<<"Inputs:  Choose Only 1"<<std::endl;
 
-	cout<<setw(10)<<left<<"";
-	cout<<setw(20)<<left<<"-f <file location>";
-	cout<<"Process image at <file location>"<<endl;
-	cout<<setw(30)<<""<<"ex: -f /home/image.jpg"<<endl;
+	std::cout<<std::setw(10)<<std::left<<"";
+	std::cout<<std::setw(20)<<std::left<<"-f <file location>";
+	std::cout<<"Process image at <file location>"<<std::endl;
+	std::cout<<std::setw(30)<<""<<"ex: -f /home/image.jpg"<<std::endl;
 
-	cout<<setw(10)<<left<<"";
-	cout<<setw(20)<<left<<"-c <ip address>";
-	cout<<"Use IP camera at <ip address>"<<endl;
-	cout<<setw(30)<<""<<"ex: -c 10.21.68.2"<<endl;
+	std::cout<<std::setw(10)<<std::left<<"";
+	std::cout<<std::setw(20)<<std::left<<"-c <ip address>";
+	std::cout<<"Use IP camera at <ip address>"<<std::endl;
+	std::cout<<std::setw(30)<<""<<"ex: -c 10.21.68.2"<<std::endl;
 
-	cout<<setw(10)<<left<<"";
-	cout<<setw(20)<<left<<"-u";
-	cout<<"Use USB cam at /dev/video0"<<endl;
+	std::cout<<std::setw(10)<<std::left<<"";
+	std::cout<<std::setw(20)<<std::left<<"-u";
+	std::cout<<"Use USB cam at /dev/video0"<<std::endl;
 
-	cout<<endl<<endl;
-	cout<<setw(10)<<left<<"Options:  Choose Any Combination"<<endl;
+	std::cout<<std::endl<<std::endl;
+	std::cout<<std::setw(10)<<std::left<<"Options:  Choose Any Combination"<<std::endl;
 
 
-	cout<<setw(10)<<left<<"";
-	cout<<setw(20)<<left<<"-t";
-	cout<<"Enable Timing Print Outs"<<endl;
+	std::cout<<std::setw(10)<<std::left<<"";
+	std::cout<<std::setw(20)<<std::left<<"-t";
+	std::cout<<"Enable Timing Print Outs"<<std::endl;
 
-	cout<<setw(10)<<left<<"";
-	cout<<setw(20)<<left<<"-v";
-	cout<<"Enable Visual Output"<<endl;
-	cout<<setw(30)<<""<<"Uses X11 forwarding to show processed image"<<endl;
+	std::cout<<std::setw(10)<<std::left<<"";
+	std::cout<<std::setw(20)<<std::left<<"-v";
+	std::cout<<"Enable Visual Output"<<std::endl;
+	std::cout<<std::setw(30)<<""<<"Uses X11 forwarding to show processed image"<<std::endl;
 
-	cout<<setw(10)<<left<<"";
-	cout<<setw(20)<<left<<"-np";
-	cout<<"No Processing: Disable Processing Thread"<<endl;
+	std::cout<<std::setw(10)<<std::left<<"";
+	std::cout<<std::setw(20)<<std::left<<"-np";
+	std::cout<<"No Processing: Disable Processing Thread"<<std::endl;
 
-	cout<<setw(10)<<left<<"";
-	cout<<setw(20)<<left<<"-debug";
-	cout<<"Enable Debug Print Outs"<<endl;
+	std::cout<<std::setw(10)<<std::left<<"";
+	std::cout<<std::setw(20)<<std::left<<"-debug";
+	std::cout<<"Enable Debug Print Outs"<<std::endl;
 
-	cout<<setw(10)<<left<<"";
-	cout<<setw(20)<<left<<"-help";
-	cout<<"Prints this menu"<<endl;
+	std::cout<<std::setw(10)<<std::left<<"";
+	std::cout<<std::setw(20)<<std::left<<"-help";
+	std::cout<<"Prints this menu"<<std::endl;
 
 
 }
