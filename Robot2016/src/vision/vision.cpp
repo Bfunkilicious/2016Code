@@ -199,12 +199,12 @@ int visionTest()
 			if (!frame.empty())
 			{
 				frame.copyTo(img);
-
-				Image* myImaqImage = imaqCreateImage(IMAQ_IMAGE_RGB,  0);
-				cv::Mat rgba;
-				cv::cvtColor(frame, rgba, CV_BGR2BGRA, 4);
-				int rc = imaqArrayToImage(myImaqImage, rgba.data, img.cols, img.rows);
-				CameraServer::GetInstance()->SetImage(myImaqImage);
+				//cv::imwrite("testingfile.png", frame);
+				//Image* myImaqImage = imaqCreateImage(IMAQ_IMAGE_RGB,  0);
+				//cv::Mat rgba;
+				//cv::cvtColor(frame, rgba, CV_BGR2BGRA, 4);
+				//int rc = imaqArrayToImage(myImaqImage, rgba.data, img.cols, img.rows);
+				//CameraServer::GetInstance()->SetImage(myImaqImage);
 				pthread_mutex_unlock(&frameMutex);
 
 				thresholded = ThresholdImage(img);
