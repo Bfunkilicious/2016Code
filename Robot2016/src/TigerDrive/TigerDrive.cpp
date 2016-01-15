@@ -2,6 +2,7 @@
 
 TigerDrive::TigerDrive(AHRS* imuP)
 {
+	printf("constructing TigerDrive!\n");
 	imuPointer = imuP;
 	imuYaw = 0;
 	angleTolerance = 2; //change if you want.

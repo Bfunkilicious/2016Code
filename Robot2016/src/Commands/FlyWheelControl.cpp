@@ -2,9 +2,9 @@
 
 FlyWheelControl::FlyWheelControl()
 {
+	printf("FWC Constructor!\n");
 	Requires(Robot::shooterSub.get());
 	buttonAPressed = false;
-	printf("FWC Constructor!\n");
 }
 
 // Called just before this Command runs the first time

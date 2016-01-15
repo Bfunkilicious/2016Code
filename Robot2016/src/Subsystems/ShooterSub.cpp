@@ -5,12 +5,14 @@
 ShooterSub::ShooterSub() :
 		Subsystem("ShooterSub")
 {
+	printf("constructing shooter sub!\n");
 	talonLeft = RobotMap::shooterSubLeftTalon;
 	talonRight = RobotMap::shooterSubRightTalon;
 }
 
 void ShooterSub::InitDefaultCommand()
 {
+	printf("setting default command for shooter sub!\n");
 	// Set the default command for a subsystem here.
 	SetDefaultCommand(new FlyWheelControl());
 }
@@ -20,7 +22,6 @@ void ShooterSub::InitDefaultCommand()
 
 void ShooterSub::Shoot(float speed)
 {
-	printf("ShooterSub::shoot! \n");
 	Robot::shooterSub->talonLeft->Set(speed);
 	Robot::shooterSub->talonRight->Set(speed);
 }

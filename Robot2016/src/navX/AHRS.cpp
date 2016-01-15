@@ -388,7 +388,7 @@ float AHRS::GetRoll() {
  * @return The current yaw value in degrees (-180 to 180).
  */
 float AHRS::GetYaw() {
-	printf("Getting Yaw!\n");
+	//printf("Getting Yaw!\n");
     if ( ahrs_internal->IsBoardYawResetSupported() ) {
         return this->yaw;
     } else {

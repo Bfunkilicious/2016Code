@@ -2,6 +2,7 @@
 
 SetOffset::SetOffset(float offset)
 {
+	printf("SetOffset Constructor!\n");
 	Requires(Robot::driveBaseSub.get());
 	isDone = false;
 	offsetInput = offset;

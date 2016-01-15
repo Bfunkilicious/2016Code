@@ -154,17 +154,12 @@ struct timespec autoStart, autoEnd;
 //Control process thread exectution
 bool progRun;
 
-int superTest()
+int visionTest(int argc, const char* argv[])
 {
 
 	//Read command line inputs to determine how the program will execute
 	ProgParams params;
-	//parseCommandInputs(argc, argv, params);
-	params.From_Camera = true;
-	params.From_File = false;
-	params.USB_Cam = true;
-	params.Visualize = true;
-	params.Timer = true;
+	parseCommandInputs(argc, argv, params);
 
 	//start mjpeg stream thread
 	pthread_create(&MJPEG, NULL, VideoCap, &params);
@@ -818,3 +813,6 @@ double diffClock(timespec start, timespec end)
 {
  return	(end.tv_sec - start.tv_sec) + (double) (end.tv_nsec - start.tv_nsec)/ 1000000000.0f;
 }
+
+
+
