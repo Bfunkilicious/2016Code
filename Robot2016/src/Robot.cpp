@@ -84,7 +84,7 @@ void Robot::TeleopInit() {
 
 void Robot::TeleopPeriodic() {
 	Scheduler::GetInstance()->Run();
-	printf("Teleop Periodic\n");
+	//printf("Teleop Periodic\n");
 }
 
 void Robot::TestPeriodic() {

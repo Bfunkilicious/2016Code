@@ -46,7 +46,7 @@ struct ProgParams
 	std::string ROBOT_IP;
 	std::string ROBOT_PORT;
 	std::string CAMERA_IP;
-	std::string IMAGE_FILE;
+	std::string IMAGE_FILE = "/home/vision/144_L.jpg";
 
 	bool From_Camera;
 	bool From_File;
@@ -162,11 +162,12 @@ int visionTest()
 
 	//Read command line inputs to determine how the program will execute
 	ProgParams params;
-	params.From_Camera = true;
-	params.From_File = false;
-	params.USB_Cam = true;
+	params.From_Camera = false;
+	params.From_File = true;
+	params.USB_Cam = false;
 	params.Visualize = false;
 	params.Timer = true;
+	params.Process = true;
 
 	//start mjpeg stream thread
 	pthread_create(&MJPEG, NULL, VideoCap, &params);
@@ -189,15 +190,17 @@ int visionTest()
 		//check if program is allowed to run
 		//this bool, is enabled by the mjpeg thread
 		//once it is up to 10fps
-
+		std::cout << "Process: " << params.Process << " progRun: " << progRun << ".\n";
 		if (params.Process && progRun)
 		{
+			printf("progRun is true and params.Process is true!\n");
 			//start clock to determine our processing time;
 			clock_gettime(CLOCK_REALTIME, &start);
 
 			pthread_mutex_lock(&frameMutex);
 			if (!frame.empty())
 			{
+				printf("frame is not empty!\n");
 				frame.copyTo(img);
 				//cv::imwrite("testingfile.png", frame);
 				//Image* myImaqImage = imaqCreateImage(IMAQ_IMAGE_RGB,  0);

@@ -45,7 +45,7 @@ void DriveCommand::Initialize() {
 
 // Called repeatedly when this Command is scheduled to run
 void DriveCommand::Execute() {
-	printf("DriveCommand Execute!\n");
+	//printf("DriveCommand Execute!\n");
 	SmartDashboard::PutNumber("imuYaw", Robot::driveBaseSub->getAdjYaw());
 	isRotDone = Robot::driveBaseSub->getIsRotDone();
 	//printf("isRotDone%d\n", isRotDone);
@@ -86,10 +86,10 @@ void DriveCommand::Execute() {
 		//Rotate to Set Angle at Max Speed (1)
 		FinalAutoRot = Robot::driveBaseSub->CalculateRotValue(SetAngle, SetSpeed);
 	}
-	printf("\n");
-	printf("FinalAutoRot: %f\n", FinalAutoRot);
-	printf("Angle: %f\n,", AdjustedYaw);
-	printf("isRotDone: %d\n", Robot::driveBaseSub->getIsRotDone());
+	//printf("\n");
+	//printf("FinalAutoRot: %f\n", FinalAutoRot);
+	//printf("Angle: %f\n,", AdjustedYaw);
+	//printf("isRotDone: %d\n", Robot::driveBaseSub->getIsRotDone());
 	if(Robot::driveBaseSub->getIsRotDoneOverride())
 	{
 		FinalAutoRot = 0;

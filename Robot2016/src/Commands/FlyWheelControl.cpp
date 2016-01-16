@@ -17,7 +17,7 @@ void FlyWheelControl::Initialize()
 // Called repeatedly when this Command is scheduled to run
 void FlyWheelControl::Execute()
 {
-	printf("FWC Execute!\n");
+	//printf("FWC Execute!\n");
 	buttonAPressed = Robot::oi->getGunnerJoystick()->GetRawButton(1); //change to trigger for variable speed?
 
 	if(buttonAPressed)
