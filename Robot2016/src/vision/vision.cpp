@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>
 #define AUTO_STEADY_STATE 1.9 //seconds
 
 #include "../Robot.h"
+#include <fstream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <opencv2/opencv.hpp>
@@ -156,15 +157,16 @@ struct timespec autoStart, autoEnd;
 bool progRun;
 
 //testing
+int j = 0;
 
 int visionTest()
 {
 
 	//Read command line inputs to determine how the program will execute
 	ProgParams params;
-	params.From_Camera = false;
-	params.From_File = true;
-	params.USB_Cam = false;
+	params.From_Camera = true;
+	params.From_File = false;
+	params.USB_Cam = true;
 	params.Visualize = false;
 	params.Timer = true;
 	params.Process = true;
@@ -181,6 +183,7 @@ int visionTest()
 	targets.validFrame = false;
 	targets.hotLeftOrRight = 0;
 	progRun = false;
+	std::ofstream myFile;
 
 	struct timespec start, end;
 
@@ -193,7 +196,7 @@ int visionTest()
 		std::cout << "Process: " << params.Process << " progRun: " << progRun << ".\n";
 		if (params.Process && progRun)
 		{
-			printf("progRun is true and params.Process is true!\n");
+			//printf("progRun is true and params.Process is true!\n");
 			//start clock to determine our processing time;
 			clock_gettime(CLOCK_REALTIME, &start);
 
@@ -202,7 +205,13 @@ int visionTest()
 			{
 				printf("frame is not empty!\n");
 				frame.copyTo(img);
-				//cv::imwrite("testingfile.png", frame);
+				int i = frame.at<uchar>(101,97);
+				std::cout << "frame.at: " << i << "\n";
+			    std::cout << "rows: " << frame.rows << " cols: " << frame.cols << "\n";
+			    if(j == 1) {
+			    	 cv::imwrite("/home/lvuser/alpha.jpg", frame);
+			    }
+			    j++;
 				//Image* myImaqImage = imaqCreateImage(IMAQ_IMAGE_RGB,  0);
 				//cv::Mat rgba;
 				//cv::cvtColor(frame, rgba, CV_BGR2BGRA, 4);
@@ -659,7 +668,7 @@ void *VideoCap(void *args)
 			//We specify desired frame size and fps in constructor
 			//Camera must be able to support specified framesize and frames per second
 			//or this will set camera to defaults
-			while (!vcap.open(videoStreamAddress, 320,240,7.5))
+			while (!vcap.open(videoStreamAddress, 640,480,7.5))
 			{
 				std::cout << "Error connecting to camera stream, retrying " << count<< std::endl;
 				count++;
