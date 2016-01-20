@@ -34,6 +34,9 @@
 
 	 bool shouldRun = true;
 
+	 int biggestArea = 0;
+	 int biggestAreaIndex = 0;
+
 /**
  * @param angle a nonnormalized angle
  */
@@ -57,8 +60,8 @@
   */
  void processImage(){
 	printf("IM AM IN PROCESS IMAGE!\n");
- 	std::vector<std::vector<cv::Point>> contours =  std::vector<std::vector<cv::Point>>();
- 	std::vector<std::vector<cv::Point>> selected =  std::vector<std::vector<cv::Point>>();
+ 	std::vector<std::vector<cv::Point>> contours;
+ 	std::vector<std::vector<cv::Point>> selected(1);
  	double x,y,targetX,targetY,distance,azimuth;
  //		frame counter
  	int FrameCount = 0;
@@ -80,17 +83,16 @@
  		printf("looping\n");
  		for (int i = 0; i < contours.size();  i++) {
  			cv::Rect rec = cv::boundingRect(contours.at(i));
- 				if(rec.area() > 300/*rec.height > 25 || rec.width > 25*/){
- 					selected.push_back(contours.at(i));
- 				continue;
- 				}
- 				float aspect = (float)rec.width/(float)rec.height;
- 				if(aspect > 1.0)
- 					selected.push_back(contours.at(i));
- 			}
- 			for(std::vector<cv::Point> mop : contours){
- 				cv::Rect rec = cv::boundingRect(mop);
- 				cv::rectangle(matOriginal, rec.br(), rec.tl(), BLACK);
+			float aspect = (float)rec.width/(float)rec.height;
+			if(aspect > 1.0) {
+				if(rec.area() > biggestArea)
+					biggestArea = rec.area();
+					selected[0] = contours.at(i);
+				}
+ 		}
+ 		for(int i = 0; i < selected.size(); i++){
+ 			cv::Rect rec = cv::boundingRect(selected.at(i));
+ 			cv::rectangle(matOriginal, rec.br(), rec.tl(), BLACK);
  		}
  //			if there is only 1 target, then we have found the target we want
  		if(selected.size() == 1){
