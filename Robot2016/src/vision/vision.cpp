@@ -46,7 +46,7 @@ struct ProgParams
 {
 	std::string ROBOT_IP;
 	std::string ROBOT_PORT;
-	std::string CAMERA_IP;
+	std::string CAMERA_IP = "10.20.53.10";
 	std::string IMAGE_FILE = "/home/vision/144_L.jpg";
 
 	bool From_Camera;
@@ -166,7 +166,7 @@ int visionTest()
 	ProgParams params;
 	params.From_Camera = true;
 	params.From_File = false;
-	params.USB_Cam = true;
+	params.USB_Cam = false;
 	params.Visualize = false;
 	params.Timer = true;
 	params.Process = true;
@@ -298,141 +298,32 @@ void findTarget(cv::Mat original, cv::Mat thresholded, Target& targets, const Pr
 {
 
 	std::vector<cv::Vec4i> hierarchy;
-	std::vector<std::vector<cv::Point> > contours;
+	std::vector<std::vector<Point> > contours;
+	std::vector<int> selected;
+	std::vector<cv::Rect> rectangle;
 
-	//Find rectangles
-	findContours(thresholded, contours, hierarchy, cv::RETR_EXTERNAL,
-			cv::CHAIN_APPROX_SIMPLE);
+	cv::findContours(thresholded, contours, CV_RETR_TREE, CV_CHAIN_APPROX_NONE); // finds contours
 
-	if(params.Debug)
+	std::vector<Rect> boundRect(contours.size()); //vector of bounding rectangles
+
+	cv::Mat drawing = cv::Mat::zeros(thresholded.size(), CV_8UC3); //empty mat for drawing on
+
+	for (int i = 0; i < contours.size(); i++) //loops through all contours and checks if they are big enough, if so makes a bounding box
 	{
-	std::cout << "Contours: " << contours.size() << std::endl;
-	std::cout << "Hierarchy: " << hierarchy.size() << std::endl;
-	}
-
-	//run through all contours and remove small contours
-	unsigned int contourMin = 6;
-	for (std::vector<std::vector<cv::Point> >::iterator it = contours.begin();
-			it != contours.end();)
-	{
-		//std::cout<<"Contour Size: "<<it->size()<<std::endl;
-		if (it->size() < contourMin)
-			it = contours.erase(it);
-
-		else
-			++it;
-
-	}
-
-	//Vector for Min Area Boxes
-	std::vector<cv::RotatedRect> minRect(contours.size());
-
-	/// Draw contours
-	cv::Mat drawing = cv::Mat::zeros(original.size(), CV_8UC3);
-
-	NullTargets(targets);
-
-	//run through large contours to see if they are our targerts
-	if (!contours.empty() && !hierarchy.empty())
-	{
-
-		for (unsigned int i = 0; i < contours.size(); i++)
+		cv::Scalar color = cv::Scalar(0, 255, 0);
+		cv::Rect R = cv::boundingRect(contours[i]);
+		// filter contours according to their bounding box
+		if (R.area() >= 300)
 		{
-			//capture corners of contour
-			minRect[i] = cv::minAreaRect(cv::Mat(contours[i]));
-
-			if(params.Visualize)
-			{
-
-				//if(hierarchy[i][100] != -1)
-				//drawContours(original, contours, i, RED, 2, 8, hierarchy, 0,Point());
-
-				//draw a minimum box around the target in green
-				cv::Point2f rect_points[4];
-				minRect[i].points(rect_points);
-				for (int j = 0; j < 4; j++)
-					line(original, rect_points[j], rect_points[(j + 1) % 4], BLUE, 1, 8);
-			}
-			//define minAreaBox
-			cv::Rect box = minRect[i].boundingRect();
-
-			double WHRatio = box.width / ((double) box.height);
-			double HWRatio = ((double) box.height) / box.width;
-
-			//check if contour is vert, we use HWRatio because it is greater that 0 for vert target
-			if ((HWRatio > MinVRatio) && (HWRatio < MaxVRatio))
-			{
-				targets.VertGoal = true;
-				targets.VerticalTarget = box;
-				targets.VerticalAngle = minRect[i].angle;
-				targets.VerticalCenter = cv::Point(box.x + box.width / 2,
-						box.y + box.height / 2);
-				targets.Vertical_H_W_Ratio = HWRatio;
-				targets.Vertical_W_H_Ratio = WHRatio;
-
-			}
-			//check if contour is horiz, we use WHRatio because it is greater that 0 for vert target
-			else if ((WHRatio > MinHRatio) && (WHRatio < MaxHRatio))
-			{
-				targets.HorizGoal = true;
-				targets.HorizontalTarget = box;
-				targets.HorizontalAngle = minRect[i].angle;
-				targets.HorizontalCenter = cv::Point(box.x + box.width / 2,
-						box.y + box.height / 2);
-				targets.Horizontal_H_W_Ratio = HWRatio;
-				targets.Horizontal_W_H_Ratio = WHRatio;
-			}
-
-			if (targets.HorizGoal && targets.VertGoal)
-			{
-				targets.HotGoal = true;
-
-				//determine left or right
-				if (targets.VerticalCenter.x < targets.HorizontalCenter.x) //target is right
-					targets.targetLeftOrRight = 1;
-				else if (targets.VerticalCenter.x > targets.HorizontalCenter.x) //target is left
-					targets.targetLeftOrRight = -1;
-
-				targets.lastTargerLorR = targets.targetLeftOrRight;
-
-			}
-
-			if(params.Debug)
-			{
-				std::cout<<"Contour: "<<i<<std::endl;
-				std::cout<<"\tX: "<<box.x<<std::endl;
-				std::cout<<"\tY: "<<box.y<<std::endl;
-				std::cout<<"\tHeight: "<<box.height<<std::endl;
-				std::cout<<"\tWidth: "<<box.width<<std::endl;
-				std::cout<<"\tangle: "<<minRect[i].angle<<std::endl;
-				std::cout<<"\tRatio (W/H): "<<WHRatio<<std::endl;
-				std::cout<<"\tRatio (H/W): "<<HWRatio<<std::endl;
-				std::cout<<"\tArea: "<<box.height*box.width<<std::endl;
-			}
-
-			//ID the center in yellow
-			cv::Point center(box.x + box.width / 2, box.y + box.height / 2);
-			cv::line(original, center, center, YELLOW, 3);
-			cv::line(original, cv::Point(320/2, 240/2), cv::Point(320/2, 240/2), YELLOW, 3);
-
+			selected.push_back(i);
+			cv::drawContours(drawing, contours, i, color, 2, 8, hierarchy, 0, cv::Point());
 		}
-		//if(params.Visualize)
-			//imshow("Contours", original); //Make a rectangle that encompasses the target
 	}
-	else
+
+	for (size_t i = 0; i < selected.size(); i++) //draws rectangles
 	{
-		std::cout << "No Contours" << std::endl;
-		targets.targetLeftOrRight = 0;
+		cv::rectangle(drawing, cv::boundingRect(contours[selected[i]]), cv::Scalar(0, 0, 255), 5);
 	}
-
-	if(params.Visualize)
-				imshow("Contours", original); //Make a rectangle that encompasses the target
-
-	pthread_mutex_lock(&matchStartMutex);
-	if (!targets.matchStart)
-		targets.hotLeftOrRight = targets.targetLeftOrRight;
-	pthread_mutex_unlock(&matchStartMutex);
-
 }
 
 /**
