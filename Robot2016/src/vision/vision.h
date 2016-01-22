@@ -8,6 +8,12 @@
 #ifndef SRC_VISION_VISION_H_
 #define SRC_VISION_VISION_H_
 
+
+#include <opencv2/opencv.hpp>
+#include <math.h>
+#include <ctime>
+
+
 void visionTest();
 void processImage();
 void normalize360();
