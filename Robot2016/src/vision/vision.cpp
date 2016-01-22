@@ -1,4 +1,6 @@
-#include "vision.h"
+#include <opencv2/opencv.hpp>
+#include <math.h>
+#include <ctime>
 
 #define PI 3.14159265
 
@@ -71,7 +73,7 @@
  		videoCapture.read(matOriginal);
  		printf("after read\n");
  //			captures from a static file for testing
- 		//matOriginal = cv::imread("/home/lvuser/original.png");
+ 		matOriginal = cv::imread("/home/lvuser/original.png");
  		cv::cvtColor(matOriginal,matHSV,cv::COLOR_BGR2HSV);
  		cv::inRange(matHSV, LOWER_BOUNDS, UPPER_BOUNDS, matThresh);
  		cv::findContours(matThresh, contours, matHeirarchy, cv::RETR_EXTERNAL,
@@ -88,8 +90,6 @@
 					selected[0] = contours.at(i);
 				}
  		}
- 		std::cout << "Contours.Size: " << contours.size() << std::endl;
- 		std::cout << "Selected.Size: " << selected.size() << std::endl;
  		for(int i = 0; i < selected.size(); i++){
  			cv::Rect rec = cv::boundingRect(selected.at(i));
  			cv::rectangle(matOriginal, rec.br(), rec.tl(), BLACK);
