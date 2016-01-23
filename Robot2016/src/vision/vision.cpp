@@ -1,6 +1,7 @@
 #include <opencv2/opencv.hpp>
 #include <math.h>
 #include <ctime>
+#include "../Robot.h"
 
 #define PI 3.14159265
 
@@ -11,8 +12,8 @@
 	BLACK = cv::Scalar(0,0,0),
 	YELLOW = cv::Scalar(0, 255, 255),
 //	these are the threshold values in order
-	LOWER_BOUNDS = cv::Scalar(58,0,109),
-	UPPER_BOUNDS = cv::Scalar(93,255,240);
+	LOWER_BOUNDS = cv::Scalar(239,0,109),
+	UPPER_BOUNDS = cv::Scalar(300,255,240);
 
 //	the size for resing the image
 	const cv::Size resize = cv::Size(320,240);
@@ -37,6 +38,11 @@
 	 int biggestArea = 0;
 	 int biggestAreaIndex = 0;
 
+	 bool buttonPressed = false;
+
+	 std::vector<std::vector<cv::Point>> contours;
+	 std::vector<std::vector<cv::Point>> selected;
+
 /**
  * @param angle a nonnormalized angle
  */
@@ -59,44 +65,50 @@
   * reads an image from a live image capture and outputs information to the SmartDashboard or a file
   */
  void processImage(){
+	//buttonPressed = Robot::oi->getDriveJoystick()->GetRawButton(5);
 	printf("IM AM IN PROCESS IMAGE!\n");
- 	std::vector<std::vector<cv::Point>> contours;
- 	std::vector<std::vector<cv::Point>> selected(1);
  	double x,y,targetX,targetY,distance,azimuth;
  //		frame counter
  	int FrameCount = 0;
  //		only run for the specified time
  	while(FrameCount < 100){
+ 		std::cout << "frameCount: " << FrameCount << std::endl;
  		contours.clear();
+ 		selected.clear();
  //			capture from the axis camera
  		printf("before read\n");
  		videoCapture.read(matOriginal);
  		printf("after read\n");
  //			captures from a static file for testing
- 		matOriginal = cv::imread("/home/lvuser/original.png");
+ 		//matOriginal = cv::imread("/home/lvuser/original.png");
+ 		cv::imwrite("/home/lvuser/original.jpg", matOriginal);
  		cv::cvtColor(matOriginal,matHSV,cv::COLOR_BGR2HSV);
  		cv::inRange(matHSV, LOWER_BOUNDS, UPPER_BOUNDS, matThresh);
  		cv::findContours(matThresh, contours, matHeirarchy, cv::RETR_EXTERNAL,
  				cv::CHAIN_APPROX_SIMPLE);
+ 		std::cout << "Size of contours: " << contours.size() << std::endl;
  //			make sure the contours that are detected are at least 20x20
  //			pixels with an area of 400 and an aspect ration greater then 1
- 		printf("looping\n");
- 		for (int i = 0; i < contours.size();  i++) {
- 			cv::Rect rec = cv::boundingRect(contours.at(i));
+ 		//printf("looping\n");
+ 		for (unsigned int i = 0; i < contours.size();  i++) {
+ 			cv::Rect rec = cv::boundingRect(contours[i]);
 			float aspect = (float)rec.width/(float)rec.height;
 			if(aspect > 1.0) {
 				if(rec.area() > biggestArea)
 					biggestArea = rec.area();
-					selected[0] = contours.at(i);
+					selected.push_back(contours[i]);
 				}
  		}
- 		for(int i = 0; i < selected.size(); i++){
- 			cv::Rect rec = cv::boundingRect(selected.at(i));
+ 		std::cout << "Size of selected: " << selected.size() << std::endl;
+ 		for(unsigned int i = 0; i < selected.size(); i++){
+ 			cv::Rect rec = cv::boundingRect(selected[i]);
+ 			std::cout << "looping on selected!" << std::endl;
  			cv::rectangle(matOriginal, rec.br(), rec.tl(), BLACK);
  		}
  //			if there is only 1 target, then we have found the target we want
  		if(selected.size() == 1){
- 			cv::Rect rec = cv::boundingRect(contours.at(0));
+ 			std::cout << "selected is one!" << std::endl;
+ 			cv::Rect rec = cv::boundingRect(selected[0]);
  //				"fun" math brought to you by miss daisy (team 341)!
  			y = rec.br().y + rec.height / 2;
  			y= -((2 * (y / matOriginal.cols)) - 1);
@@ -113,10 +125,10 @@
  			cv::putText(matOriginal, ""+(int)azimuth, centerw, cv::FONT_HERSHEY_PLAIN, 1, BLACK);
  		}
  //			output an image for debugging
- 		cv::imwrite("/home/lvuser/output.png", matOriginal);
+ 	 		cv::imwrite("/home/lvuser/output.jpg", matOriginal);
  		FrameCount++;
  	}
- 	shouldRun = false;
+ 	//shouldRun = false;
 }
 
 /**
@@ -137,11 +149,13 @@
 //				opens up the camera stream and tries to load it
 			videoCapture =  cv::VideoCapture();
 //				replaces the ##.## with your team number
-			videoCapture.open("http://10.20.53.10/mjpg/video.mjpg");
+			videoCapture.open("http://axis-camera.local/mjpg/video.mjpg");
 //				Example
 //				cap.open("http://10.30.19.11/mjpg/video.mjpg");
 //				wait until it is opened
-			while(!videoCapture.isOpened()){}
+			while(!videoCapture.isOpened()){
+				printf("videoCapture could not open!\n");
+			}
 //				time to actually process the acquired images
 			processImage();
 		} catch (std::exception& e) {
